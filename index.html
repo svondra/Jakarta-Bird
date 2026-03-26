@@ -28,7 +28,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
 
-    // --- PERBAIKAN NAMA FILE DISINI ---
+    // PENTING: Nama file harus persis sama dengan yang ada di GitHub
     const birdImg = new Image(); birdImg.src = 'bird.png';
     const logoImg = new Image(); logoImg.src = 'Logo.PNG'; 
 
@@ -36,15 +36,54 @@
     const fpsLimit = 1000 / 60;
     const gravity = 0.45, jump = -7, birdSize = 55;
     
-    let currentFormLink = "";
-    let rewardsShown = { 5: false, 10: false, 15: false, 25: false };
+    // Variabel Animasi Latar Belakang
+    let airplaneX = -300;
+    let balloonY = 400; 
+    let balloonX = 280;
 
     function reset() {
         birdY = 250; birdV = 0; pipes = []; score = 0; frame = 0; 
         gameOver = false; isPaused = false; gameStarted = false; cityX = 0;
-        currentFormLink = "";
-        rewardsShown = { 5: false, 10: false, 15: false, 25: false };
+        airplaneX = -400;
+        balloonY = 400;
         document.getElementById('rewardModal').style.display = 'none';
+    }
+
+    // PESAWAT: Membawa spanduk Kirim uang
+    function drawAirplane(x, y) {
+        ctx.save();
+        ctx.fillStyle = "white";
+        ctx.beginPath(); ctx.ellipse(x, y, 25, 8, 0, 0, Math.PI * 2); ctx.fill(); 
+        ctx.fillRect(x - 5, y - 12, 6, 24); 
+        
+        // Banner Merah
+        ctx.fillStyle = "#b71c1c"; ctx.fillRect(x - 210, y - 12, 175, 24);
+        ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.strokeRect(x - 210, y - 12, 175, 24);
+        
+        ctx.fillStyle = "white";
+        ctx.font = "bold 11px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Kirim uang dengan Indomoney", x - 122, y + 5);
+        ctx.restore();
+    }
+
+    // BALON UDARA: Membawa teks Tidak ada libur
+    function drawBalloon(x, y) {
+        ctx.save();
+        ctx.fillStyle = "#ff4444";
+        ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#634133"; ctx.fillRect(x - 8, y + 25, 16, 12);
+        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x - 15, y + 10); ctx.lineTo(x - 8, y + 25); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 15, y + 10); ctx.lineTo(x + 8, y + 25); ctx.stroke();
+
+        ctx.fillStyle = "white";
+        ctx.font = "italic bold 12px 'Courier New', monospace";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 4; ctx.shadowColor = "black";
+        ctx.fillText("Tidak ada", x, y - 5);
+        ctx.fillText("libur", x, y + 8);
+        ctx.restore();
     }
 
     function drawRealMonas(x, y) {
@@ -65,23 +104,18 @@
         for (let i = 0; i < 2; i++) {
             let offset = i * 360;
             const sx = offset + 60; const sy = 260; 
-            ctx.fillStyle = "#444";
-            ctx.fillRect(sx + 10, sy + 45, 6, 25);
-            ctx.fillRect(sx + 64, sy + 45, 6, 25);
-            ctx.save();
-            ctx.shadowBlur = 10; ctx.shadowColor = "#FFD700";
+            ctx.fillStyle = "#444"; ctx.fillRect(sx + 10, sy + 45, 6, 25); ctx.fillRect(sx + 64, sy + 45, 6, 25);
+            ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = "#FFD700";
             ctx.fillStyle = "#b71c1c"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
             ctx.fillRect(sx, sy, 80, 45); ctx.strokeRect(sx, sy, 80, 45);
             ctx.restore();
-            ctx.fillStyle = "white"; ctx.font = "bold 12px Arial";
-            ctx.textAlign = "center"; ctx.fillText("INDO", sx + 40, sy + 18); ctx.fillText("MONEY", sx + 40, sy + 34);
+            ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign = "center";
+            ctx.fillText("INDO", sx + 40, sy + 18); ctx.fillText("MONEY", sx + 40, sy + 34);
             ctx.fillStyle = "#1e3d41"; ctx.fillRect(offset + 20, 330, 55, 250);
             ctx.fillStyle = "#FFD700"; ctx.fillRect(offset + 40, 320, 15, 10); 
             ctx.fillStyle = "#2c5d63"; ctx.fillRect(offset + 250, 310, 70, 270);
             ctx.fillStyle = "#f9d423";
-            for(let r = 350; r < 580; r += 30) {
-                ctx.fillRect(offset + 30, r, 6, 8); ctx.fillRect(offset + 280, r, 6, 8);
-            }
+            for(let r = 350; r < 580; r += 30) { ctx.fillRect(offset + 30, r, 6, 8); ctx.fillRect(offset + 280, r, 6, 8); }
             drawRealMonas(offset + 170, 370);
         }
         ctx.restore();
@@ -100,43 +134,44 @@
             lastTime = timestamp - (deltaTime % fpsLimit);
             ctx.fillStyle = "#4ec0ca";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Animasi Pesawat & Balon (Latar Belakang)
+            airplaneX += 1.2; if (airplaneX > canvas.width + 300) airplaneX = -300;
+            drawAirplane(airplaneX, 60);
+            balloonY -= 0.3; if (balloonY < -50) balloonY = canvas.height + 50;
+            drawBalloon(balloonX, balloonY);
+
             drawJakarta();
 
             if (gameStarted && !gameOver && !isPaused) {
                 birdV += gravity; birdY += birdV;
                 if (birdY > canvas.height || birdY < 0) triggerGameOver();
                 if (frame++ % 90 === 0) {
-                    let gap = 150; 
-                    const top = Math.random() * (canvas.height - gap - 200) + 80;
+                    let gap = 150; const top = Math.random() * (canvas.height - gap - 200) + 80;
                     pipes.push({ x: canvas.width, top, gap, passed: false });
                 }
                 for (let i = pipes.length - 1; i >= 0; i--) {
-                    let p = pipes[i]; p.x -= 3.6;
-                    drawPipe(p);
+                    let p = pipes[i]; p.x -= 3.6; drawPipe(p);
                     if (60 + 18 > p.x && 60 - 18 < p.x + 55) {
                         if (birdY - 18 < p.top || birdY + 18 > p.top + p.gap) triggerGameOver();
                     }
-                    if (!p.passed && p.x < 60) {
-                        score++; p.passed = true;
-                        checkRewardTrigger();
-                    }
+                    if (!p.passed && p.x < 60) { score++; p.passed = true; checkRewardTrigger(); }
                     if (p.x < -60) pipes.splice(i, 1);
                 }
             } else if (!gameStarted) {
                 birdY = 250 + Math.sin(timestamp / 200) * 10;
                 ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "white"; ctx.font = "bold 22px Arial";
-                ctx.textAlign = "center"; ctx.fillText("KLIK UNTUK MULAI", canvas.width / 2, canvas.height / 2 + 120);
+                ctx.fillStyle = "white"; ctx.font = "bold 22px Arial"; ctx.textAlign = "center";
+                ctx.fillText("KLIK UNTUK MULAI", canvas.width / 2, canvas.height / 2 + 120);
             } else if (gameOver) {
                 pipes.forEach(drawPipe);
                 ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0,0,canvas.width,canvas.height);
-                ctx.fillStyle = "white"; ctx.font = "bold 30px Arial";
-                ctx.textAlign = "center"; ctx.fillText("COBA LAGI!", canvas.width / 2, canvas.height / 2 + 80);
+                ctx.fillStyle = "white"; ctx.font = "bold 30px Arial"; ctx.textAlign = "center";
+                ctx.fillText("COBA LAGI!", canvas.width / 2, canvas.height / 2 + 80);
             }
 
             if (birdImg.complete) ctx.drawImage(birdImg, 60 - birdSize/2, birdY - birdSize/2, birdSize, birdSize);
             
-            // LOGO & SKOR
             if (logoImg.complete && logoImg.width > 0) {
                 const logoH = 130; const ratio = logoImg.width / logoImg.height;
                 const logoW = logoH * ratio;
@@ -145,12 +180,8 @@
                 ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.5)";
                 ctx.drawImage(logoImg, (canvas.width - logoW) / 2, 10, logoW, logoH);
                 ctx.restore();
-                ctx.fillStyle = "white"; ctx.font = "bold 50px Arial";
-                ctx.textAlign = "center"; ctx.fillText(score, canvas.width / 2, 175);
-            } else {
-                // Tampilan cadangan skor jika logo gagal load
-                ctx.fillStyle = "white"; ctx.font = "bold 50px Arial";
-                ctx.textAlign = "center"; ctx.fillText(score, canvas.width / 2, 100);
+                ctx.fillStyle = "white"; ctx.font = "bold 50px Arial"; ctx.textAlign = "center";
+                ctx.fillText(score, canvas.width / 2, 175);
             }
         }
         requestAnimationFrame(update);
@@ -160,14 +191,12 @@
     
     function checkRewardTrigger() {
         let r = ""; let l = "";
+        let rewardsShown = { 5: false, 10: false, 15: false, 25: false };
         if (score === 5 && !rewardsShown[5]) { r = "Diskon 25nt"; l = "https://forms.cloud.microsoft/r/hHKjjf7Rxb"; rewardsShown[5] = true; }
         else if (score === 10 && !rewardsShown[10]) { r = "Diskon 50nt"; l = "https://forms.cloud.microsoft/r/scikLq4LMR"; rewardsShown[10] = true; }
         else if (score === 15 && !rewardsShown[15]) { r = "Diskon 75nt"; l = "https://forms.cloud.microsoft/r/jvdzw6Cuu2"; rewardsShown[15] = true; }
         else if (score === 25) { r = "GRATIS ONGKIR"; l = "https://forms.cloud.microsoft/r/KyvNqtbwNA"; rewardsShown[25] = true; }
-        
-        if (r !== "") { 
-            isPaused = true; 
-            currentFormLink = l;
+        if (r !== "") { isPaused = true; currentFormLink = l;
             document.getElementById('rewardText').innerHTML = `Selamat! Anda dapat <b>${r}</b>.<br><br>Mau ambil kupon atau lanjut?`;
             document.getElementById('rewardModal').style.display = 'block';
         }
@@ -179,13 +208,8 @@
     const handleAction = (e) => {
         if (e && e.type === 'keydown' && e.code !== 'Space') return;
         if (e && e.cancelable) e.preventDefault();
-        
-        if (!gameStarted) { 
-            gameStarted = true; 
-            birdV = jump; 
-        } else if (!gameOver && !isPaused) { 
-            birdV = jump; 
-        }
+        if (!gameStarted) { gameStarted = true; birdV = jump; }
+        else if (!gameOver && !isPaused) { birdV = jump; }
     };
 
     window.addEventListener('keydown', handleAction);
